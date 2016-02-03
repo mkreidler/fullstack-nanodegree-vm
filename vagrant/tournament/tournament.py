@@ -1,44 +1,86 @@
 #!/usr/bin/env python
-# 
+#
 # tournament.py -- implementation of a Swiss-system tournament
 #
 
 import psycopg2
 
+# make sure queries are returning things
+# make sure python variables are inserted outside the query
+# figure out how to execute two queries
+# incorporate matches table
+
 
 def connect():
     """Connect to the PostgreSQL database.  Returns a database connection."""
+
     return psycopg2.connect("dbname=tournament")
 
 
 def deleteMatches():
     """Remove all the match records from the database."""
+    DB = psycopg2.connect("dbname=tournament")
+    c = DB.cursor()
+    c.execute('''
+        UPDATE Players
+        SET Wins = 0, Matches = 0
+        ''')
+    c.execute('''
+        DELETE FROM Matches
+        ''')
+    DB.commit()
+    DB.close()
 
 
 def deletePlayers():
     """Remove all the player records from the database."""
+    DB = psycopg2.connect("dbname=tournament")
+    c = DB.cursor()
+    c.execute('''
+        DELETE FROM Players
+        ''')
+    c.execute('''
+        DELETE FROM Matches
+        ''')
+    DB.commit()
+    DB.close()
 
 
 def countPlayers():
     """Returns the number of players currently registered."""
+    DB = psycopg2.connect("dbname=tournament")
+    c = DB.cursor()
+    c.execute('''
+        SELECT count(*) as num from Players
+        ''')
+    count = c.fetchall()
+    DB.close()
+    return count[0][0]
 
 
 def registerPlayer(name):
     """Adds a player to the tournament database.
-  
+
     The database assigns a unique serial id number for the player.  (This
     should be handled by your SQL database schema, not in your Python code.)
-  
+
     Args:
       name: the player's full name (need not be unique).
     """
+    DB = psycopg2.connect("dbname=tournament")
+    c = DB.cursor()
+    c.execute('''
+        INSERT INTO Players(Name)
+        VALUES(%s)''',  (name,))
+    DB.commit()
+    DB.close()
 
 
 def playerStandings():
     """Returns a list of the players and their win records, sorted by wins.
 
-    The first entry in the list should be the player in first place, or a player
-    tied for first place if there is currently a tie.
+    The first entry in the list should be the player in first place,
+        or a player tied for first place if there is currently a tie.
 
     Returns:
       A list of tuples, each of which contains (id, name, wins, matches):
@@ -47,6 +89,16 @@ def playerStandings():
         wins: the number of matches the player has won
         matches: the number of matches the player has played
     """
+    DB = psycopg2.connect("dbname=tournament")
+    c = DB.cursor()
+    c.execute('''
+        SELECT *
+        FROM Players
+        ORDER BY wins DESC
+        ''')
+    rankings = c.fetchall()
+    DB.close()
+    return rankings
 
 
 def reportMatch(winner, loser):
@@ -56,16 +108,31 @@ def reportMatch(winner, loser):
       winner:  the id number of the player who won
       loser:  the id number of the player who lost
     """
- 
- 
+    DB = psycopg2.connect("dbname=tournament")
+    c = DB.cursor()
+    c.execute('''
+        UPDATE Players
+        SET Wins = Wins+1, Matches = Matches+1
+        WHERE ID = %s''' % (winner,))
+    c.execute('''
+        UPDATE Players
+        SET Matches = Matches+1
+        WHERE ID = %s''' % (loser,))
+    c.execute('''
+        INSERT INTO Matches
+        VALUES(%s, %s, %s)''', (winner, loser, winner,))
+    DB.commit()
+    DB.close()
+
+
 def swissPairings():
     """Returns a list of pairs of players for the next round of a match.
-  
+
     Assuming that there are an even number of players registered, each player
     appears exactly once in the pairings.  Each player is paired with another
     player with an equal or nearly-equal win record, that is, a player adjacent
     to him or her in the standings.
-  
+
     Returns:
       A list of tuples, each of which contains (id1, name1, id2, name2)
         id1: the first player's unique id
@@ -73,5 +140,38 @@ def swissPairings():
         id2: the second player's unique id
         name2: the second player's name
     """
-
-
+    DB = psycopg2.connect("dbname=tournament")
+    c = DB.cursor()
+    c.execute('''
+        SELECT ID, Name
+        FROM Players
+        ORDER BY wins DESC
+        ''')
+    rankings1 = c.fetchmany(size=1)
+    [(id1, name1)] = rankings1
+    c.execute('''
+        SELECT ID, Name
+        FROM Players
+        ORDER BY wins DESC
+        OFFSET 1
+        ''')
+    rankings2 = c.fetchmany(size=1)
+    [(id2, name2)] = rankings2
+    c.execute('''
+        SELECT ID, Name
+        FROM Players
+        ORDER BY wins DESC
+        OFFSET 2
+        ''')
+    rankings3 = c.fetchmany(size=1)
+    [(id3, name3)] = rankings3
+    c.execute('''
+        SELECT ID, Name
+        FROM Players
+        ORDER BY wins DESC
+        OFFSET 3
+        ''')
+    rankings4 = c.fetchmany(size=1)
+    [(id4, name4)] = rankings4
+    DB.close()
+    return [(id1, name1, id2, name2), (id3, name3, id4, name4)]
