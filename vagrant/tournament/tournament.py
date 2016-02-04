@@ -51,7 +51,7 @@ def countPlayers():
     DB = psycopg2.connect("dbname=tournament")
     c = DB.cursor()
     c.execute('''
-        SELECT count(*) as num from Players
+        SELECT count(*) from Players
         ''')
     count = c.fetchall()
     DB.close()
@@ -120,7 +120,7 @@ def reportMatch(winner, loser):
         WHERE ID = %s''' % (loser,))
     c.execute('''
         INSERT INTO Matches
-        VALUES(%s, %s, %s)''', (winner, loser, winner,))
+        VALUES(%s, %s)''', (winner, loser,))
     DB.commit()
     DB.close()
 
@@ -142,36 +142,17 @@ def swissPairings():
     """
     DB = psycopg2.connect("dbname=tournament")
     c = DB.cursor()
-    c.execute('''
-        SELECT ID, Name
-        FROM Players
-        ORDER BY wins DESC
-        ''')
-    rankings1 = c.fetchmany(size=1)
-    [(id1, name1)] = rankings1
-    c.execute('''
-        SELECT ID, Name
-        FROM Players
-        ORDER BY wins DESC
-        OFFSET 1
-        ''')
-    rankings2 = c.fetchmany(size=1)
-    [(id2, name2)] = rankings2
-    c.execute('''
-        SELECT ID, Name
-        FROM Players
-        ORDER BY wins DESC
-        OFFSET 2
-        ''')
-    rankings3 = c.fetchmany(size=1)
-    [(id3, name3)] = rankings3
-    c.execute('''
-        SELECT ID, Name
-        FROM Players
-        ORDER BY wins DESC
-        OFFSET 3
-        ''')
-    rankings4 = c.fetchmany(size=1)
-    [(id4, name4)] = rankings4
+    count = countPlayers()
+    standings = playerStandings()
+    i = 0
+    n = 0
+    upNext = []
+    while i < count:
+        pair = (standings[i][n], standings[i][n+1], standings[i+1][n], standings[i+1][n+1])
+        upNext.append(pair)
+        i += 2
     DB.close()
-    return [(id1, name1, id2, name2), (id3, name3, id4, name4)]
+    return upNext
+
+
+

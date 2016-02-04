@@ -10,16 +10,16 @@ How to Run Project
 ------------------
 Fork the repository on github
 Clone this project to your local machine
-Open terminal window
+Open a terminal window
 Change directory to vagrant/fullstack/vagrant/
-Run command 'vagrant up'
-Run command 'vagrant ssh'
+Run command 'vagrant up' to start the virtual server
+Run command 'vagrant ssh' to communicate with the server
 Run command 'cd /vagrant'
 Run command 'cd tournament'
-Run command 'psql'
-Run command '\i tournament.sql'
-Exit PSQL by pressing Ctrl+D
-Run command 'python tournament_test.py'
+Run command 'psql' to run Postgresql commands and communicate with the database
+Run command '\i tournament.sql' to import the database file from this project and set up the database on your local machine
+Exit Postgresql by pressing Ctrl+D
+Run command 'python tournament_test.py' to test the tournament
 
 
 Extra Credit Description
